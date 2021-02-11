@@ -43,13 +43,14 @@ typedef struct
 // - nhits: number of hit channels in cluster. can be useful to reject single channel noise hits
 typedef struct
 {
-  ap_uint<8> idx;
+  ap_uint<5> x;
+  ap_uint<4> y;
   ap_uint<16> e;
   ap_uint<11> t;
   ap_uint<3>  nhits;
 } cluster_t;
 
-#define N_CLUSTER_POSITIONS   200   // not sure exactly what this number will be - define this number based on the number of possible cluster positions in 1 sector
+#define N_CLUSTER_POSITIONS   147   // not sure exactly what this number will be - define this number based on the number of possible cluster positions in 1 sector
 
 typedef struct
 {
@@ -69,8 +70,12 @@ void ecal_cluster_hls(
     ap_uint<13> seed_threshold,
     ap_uint<16> cluster_threshold,
     hls::stream<fadc_hits_t> &s_fadc_hits,
-    hls::stream<trigger_t> &s_trigger//,
-    //hls::stream<cluster_all_t> &s_cluster_all
+    hls::stream<trigger_t> &s_trigger,
+    hls::stream<cluster_all_t> &s_cluster_all
   );
+
+void Find_block(int ch, int& nx, int& ny); // return the nx and ny of the fadc channel
+int Find_channel(int nx, int ny);   // return the channel number of the block(nx, ny)
+
 
 #endif

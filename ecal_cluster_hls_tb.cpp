@@ -4,7 +4,7 @@
 
 int main(int argc, char *argv[])
 {
-  ap_uint<3> hit_dt = 0;
+  ap_uint<3> hit_dt = 8;
   ap_uint<13> seed_threshold = 2000;
   ap_uint<16> cluster_threshold = 0;
   hls::stream<fadc_hits_t> s_fadc_hits;
@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
         fadc_hits.fiber_ch_r[ch].e = 0;
         fadc_hits.fiber_ch_r[ch].t = 0;
       }
-      if((rand() % 100)<1)  // 1% hit chance
+      if((rand() % 100)<10)  // 1% hit chance
       {
         fadc_hits.vxs_ch[ch].e = rand() % 8192; // random hit energy
         fadc_hits.vxs_ch[ch].t = rand() % 8;    // random hit time (4ns)
@@ -59,9 +59,24 @@ int main(int argc, char *argv[])
         seed_threshold,
         cluster_threshold,
         s_fadc_hits,
-        s_trigger//,
-        //s_cluster_all
+        s_trigger,
+        s_cluster_all
       );
+  }
+
+  while(!s_cluster_all.empty()){
+    cluster_all_t C = s_cluster_all.read();
+    for(int nc=0; nc<N_CLUSTER_POSITIONS; nc++){
+      cluster_t cl=C.c[nc];
+      if(cl.nhits!=0){
+	 int tmpx=cl.x.to_uint();
+	 int tmpy=cl.y.to_uint();
+	 int tmpe=cl.e.to_uint();
+	 int tmpt=cl.t.to_uint();
+	 int tmpn=cl.nhits.to_uint();
+         printf("cluster at block(%d,%d): e=%d, t=%d, nhits=%d\n",tmpx, tmpy, tmpe, tmpt, tmpn); 
+      }
+   }
   }
 
   int t32ns = 0;
