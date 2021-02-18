@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
     trigger.trig = 0;
     if(frame>0) s_fadc_hits_pre.write(fadc_hits);   
  
-    for(int ch=0;ch<256;ch++)
+    for(int ch=0;ch<N_CHAN_SEC;ch++)
     {
       if(ch<32)
       {
@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
         fadc_hits.fiber_ch_r[ch].e = 0;
         fadc_hits.fiber_ch_r[ch].t = 0;
       }
-      if((rand() % 100)<1)  // 1% hit chance
+      if((rand() % 100)<10)  // 1% hit chance
       {
         fadc_hits.vxs_ch[ch].e = rand() % 8192; // random hit energy
         fadc_hits.vxs_ch[ch].t = rand() % 8;    // random hit time (4ns)
@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
         fadc_hits.vxs_ch[ch].t = 0;
       }
     }
-    s_fadc_hits.write(fadc_hits);
+    if(frame>0) s_fadc_hits.write(fadc_hits);
     //s_trigger_verify.write(trigger);
   }
 
@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
     for(int i=0;i<8;i++)
     {
       if(trigger.trig[i])
-        printf("Trigger found at T=%dns\n", t32ns*32+i*4);
+        printf("Trigger found at T=%dns\n", t32ns*32+i*4+16);
     }
 #endif
     t32ns++;

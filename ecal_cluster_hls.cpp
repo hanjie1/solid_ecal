@@ -16,7 +16,7 @@ ap_uint<8> disc_cluster(cluster_t ac, ap_uint<16> cluster_threshold)
   ap_uint<8> result = 0;
 
   // discriminate and report correct 4ns time bin that threshold crossing happened
-  if(ac.t >= cluster_threshold)
+  if(ac.e >= cluster_threshold)
     result[ac.t] = 1;
 
   return result;
@@ -56,13 +56,14 @@ void ecal_cluster_hls(
       allc.c[ii].e=0;
       allc.c[ii].t=0;
       allc.c[ii].nhits=0;
+      ac_disc[ii]=0;
   }
 
   int nclust=0;
-  for(int ch=0;ch<256;ch++){
+  for(int ch=0;ch<N_CHAN_SEC;ch++){
     if(fadc_hits_pre.vxs_ch[ch].t>=4){
       fadc_disc = disc(fadc_hits_pre.vxs_ch[ch], seed_threshold);
-      if(fadc_disc>0 && ch<147){
+      if(fadc_disc>0 && ch<N_CHAN_SEC){
 	 Find_cluster(ch, fadc_hits_pre, fadc_hits, 1, ac);	
 	 if(ac.nhits>0){ allc.c[nclust]=ac; nclust++;}
       }
@@ -70,7 +71,7 @@ void ecal_cluster_hls(
 
     if(fadc_hits.vxs_ch[ch].t<4){
       fadc_disc = disc(fadc_hits.vxs_ch[ch], seed_threshold);
-      if(fadc_disc>0 && ch<147){
+      if(fadc_disc>0 && ch<N_CHAN_SEC){
 	 Find_cluster(ch, fadc_hits_pre, fadc_hits, 0, ac);	
 	 if(ac.nhits>0){ allc.c[nclust]=ac; nclust++;}
       }
@@ -91,7 +92,7 @@ void ecal_cluster_hls(
   // 'or' together result from all channels, for each possible 4ns time bin
   for(int ii=0;ii<N_CLUSTER_POSITIONS;ii++)
     trigger.trig |= ac_disc[ii];
-
+  
   // write trigger result
   s_trigger.write(trigger);
 }
@@ -188,29 +189,41 @@ void Find_cluster(int ch, fadc_hits_t fadc_hits_pre, fadc_hits_t fadc_hits, ap_u
      // find the if the center block is maximum both in e and t (could use vector and sort function here, not sure which one will be faster)
      bool found=true;
      for(int ii=0; ii<6; ii++){
-	if(ch_nearby[ii]>=0 && ch_nearby[ii]<147){
+	if(ch_nearby[ii]>=0 && ch_nearby[ii]<N_CHAN_SEC){
 
 	   ap_uint<3> tmp_t = fadc_hits_pre.vxs_ch[ch_nearby[ii]].t;
+	   ap_uint<13> tmp_e = fadc_hits_pre.vxs_ch[ch_nearby[ii]].e;
 
-	   if( tmp_t>=4 ){
-	     ap_uint<13> tmp_e = fadc_hits_pre.vxs_ch[ch_nearby[ii]].e;
+	   if( tmp_e>0){
 	     int dt = ((tmp_t-4)-c_t)*4; // ns
-	     if(fabs(dt)<8 && c_e<tmp_e){found=false; break;}   // couldn't be the center of a cluster
-             if(fabs(dt)<8 && c_e>=tmp_e)  {total_e=total_e+tmp_e; nhits++;}
+	     if(fabs(dt)<=8 && c_e<tmp_e){found=false; break;}   // couldn't be the center of a cluster
+             if(fabs(dt)<=8 && c_e>=tmp_e)  {
+	        total_e=total_e+tmp_e; 
+	        nhits++;
+#ifndef __SYNTHESIS__
+       printf("%d: ch=%d, %d, e=%d, t=%d\n",nhits.to_uint(),ch_nearby[ii],ii,tmp_e.to_uint(),tmp_t.to_uint());
+#endif
+	     }
 	   }
 
 	   tmp_t = fadc_hits.vxs_ch[ch_nearby[ii]].t;
+	   tmp_e = fadc_hits.vxs_ch[ch_nearby[ii]].e;
 
-	   if( tmp_t<4 ){
-	     ap_uint<13> tmp_e = fadc_hits.vxs_ch[ch_nearby[ii]].e;
+	   if( tmp_e>0){
 	     int dt = ((tmp_t+4)-c_t)*4; //ns
-	     if(fabs(dt)<8 && c_e<tmp_e){found=false; break;}   // couldn't be the center of a cluster
-             if(fabs(dt)<8 && c_e>=tmp_e)  {total_e=total_e+tmp_e; nhits++;}
+	     if(fabs(dt)<=8 && c_e<tmp_e){found=false; break;}   // couldn't be the center of a cluster
+             if(fabs(dt)<=8 && c_e>=tmp_e)  {
+		total_e=total_e+tmp_e; 
+		nhits++;
+#ifndef __SYNTHESIS__
+       printf("%d: ch=%d, %d, e=%d, t=%d\n",nhits.to_uint(),ch_nearby[ii],ii,tmp_e.to_uint(),tmp_t.to_uint());
+#endif
+	     }
 	   }
 	}	
      }
 
-     if(found){
+     if(found && nhits>1){
 #ifndef __SYNTHESIS__
        printf("find cluster at (%d,%d), e=%d, t=%d, nhits=%d\n",nx,ny,total_e.to_uint(),c_t.to_uint(),nhits.to_uint());
 #endif

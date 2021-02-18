@@ -28,9 +28,10 @@ typedef struct
 //
 //   fiber_ch_l[0] to fiber_ch_l[31]: these come from adjacent sectors of ecal and needed for current sector to build (6+1) clusters for trigger
 //   fiber_ch_r[0] to fiber_ch_r[31]  channel mapping is arbitrary and needs to be defined
+#define N_CHAN_SEC 147   // number of fadc channels per sector
 typedef struct
 {
-  hit_t vxs_ch[256];
+  hit_t vxs_ch[N_CHAN_SEC];
   hit_t fiber_ch_l[32];
   hit_t fiber_ch_r[32];
 } fadc_hits_t;
