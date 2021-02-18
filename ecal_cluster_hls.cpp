@@ -11,10 +11,23 @@ ap_uint<8> disc(hit_t hit, ap_uint<13> seed_threshold)
   return result;
 }
 
+ap_uint<8> disc_cluster(cluster_t ac, ap_uint<16> cluster_threshold)
+{
+  ap_uint<8> result = 0;
+
+  // discriminate and report correct 4ns time bin that threshold crossing happened
+  if(ac.t >= cluster_threshold)
+    result[ac.t] = 1;
+
+  return result;
+}
+
+
 // ecal_cluster_hls:
 // - hit_dt: maximum time difference (in +/-4ns ticks) from seed hit required to accept adjacent spacial hit into cluster
 // - seed_threshold: minimum hit energy required for central hit of cluster position to allow a cluster to be formed
 // - cluster_threshold: mimimum cluster energy required to generate a trigger
+// - s_fadc_hits_pre: FADC hit stream input (from VXS and fiber) of all fadc hits that can be used to perform cluster finding from the previous frame
 // - s_fadc_hits: FADC hit stream input (from VXS and fiber) of all fadc hits that can be used to perform cluster finding
 // - s_trigger: trigger stream output
 // - s_cluster_all: cluster stream output
@@ -22,6 +35,7 @@ void ecal_cluster_hls(
     ap_uint<3> hit_dt,
     ap_uint<13> seed_threshold,
     ap_uint<16> cluster_threshold,
+    hls::stream<fadc_hits_t> &s_fadc_hits_pre,
     hls::stream<fadc_hits_t> &s_fadc_hits,
     hls::stream<trigger_t> &s_trigger,
     hls::stream<cluster_all_t> &s_cluster_all
@@ -29,74 +43,60 @@ void ecal_cluster_hls(
 {
   // example trigger (is any FADC hit over threshold): reading fadc hit steam, and writing trigger stream
   fadc_hits_t fadc_hits = s_fadc_hits.read();
-  ap_uint<8> fadc_disc[256];
+  fadc_hits_t fadc_hits_pre = s_fadc_hits_pre.read();
+  ap_uint<8> fadc_disc;
+  ap_uint<8> ac_disc[N_CLUSTER_POSITIONS];
   trigger_t trigger = {0};
-
-  // discriminate each fadc channel
-  for(int ch=0;ch<256;ch++)
-    fadc_disc[ch] = disc(fadc_hits.vxs_ch[ch], seed_threshold);
-
-  // check if there is a cluster
-  int nclust=0;
   cluster_all_t allc;
+  cluster_t ac;
+
+  for(int ii=0; ii<N_CLUSTER_POSITIONS;ii++){
+      allc.c[ii].x=0;
+      allc.c[ii].y=0;
+      allc.c[ii].e=0;
+      allc.c[ii].t=0;
+      allc.c[ii].nhits=0;
+  }
+
+  int nclust=0;
   for(int ch=0;ch<256;ch++){
-    allc.c[nclust]={0};
-    if( fadc_disc[ch]>0 && ch<147){
-        int nx=0, ny=0;
-        Find_block(ch,nx,ny);
-        if(nx<1 || ny<1){ printf("couldn't find the block number for chan %d\n",ch);continue;}
+    if(fadc_hits_pre.vxs_ch[ch].t>=4){
+      fadc_disc = disc(fadc_hits_pre.vxs_ch[ch], seed_threshold);
+      if(fadc_disc>0 && ch<147){
+	 Find_cluster(ch, fadc_hits_pre, fadc_hits, 1, ac);	
+	 if(ac.nhits>0){ allc.c[nclust]=ac; nclust++;}
+      }
+    }
 
-	int ch_nearby[6]={-1};	
-         
-	ch_nearby[0] = Find_channel(nx-1, ny-1);  // left up
-	ch_nearby[1] = Find_channel(nx-1, ny);  // left down
-	ch_nearby[2] = Find_channel(nx, ny-1);  // middle up
-	ch_nearby[3] = Find_channel(nx, ny+1);  // middle down
-	ch_nearby[4] = Find_channel(nx+1, ny);  // right up
-	ch_nearby[5] = Find_channel(nx+1, ny+1);  // right down
-
-	ap_uint<13> c_e = fadc_hits.vxs_ch[ch].e;
-        ap_uint<3> c_t = fadc_hits.vxs_ch[ch].t;
-	int total_e=c_e;
-	int nhits=1;
-	// find the if the center block is maximum both in e and t (could use vector and sort function here, not sure which one will be faster)
-	bool found=true;
-	for(int nn=0; nn<6; nn++){
-	   if(ch_nearby[nn]>=0 && ch_nearby[nn]<147){
-	      ap_uint<13> tmp_e = fadc_hits.vxs_ch[ch_nearby[nn]].e;
-	      ap_uint<3> tmp_t = fadc_hits.vxs_ch[ch_nearby[nn]].t;
-	      double dt = tmp_t-c_t;
-	      if(c_e>=tmp_e && dt>=0 && dt<=8)  {total_e=total_e+tmp_e; nhits++;}
-	      else {found=false; break;}
-	   }	
-	}
-	printf("11 e=%d, t=%d\n",c_e.to_uint(),c_t.to_uint());
-	if(found){
-	  printf("1 cluster at (%d,%d) e=%d, t=%d, n=%d\n",nx,ny,total_e,c_t.to_uint(),nhits);
-	  cluster_t acluster;
-	  acluster.x=nx;
-	  acluster.y=ny;
-	  acluster.e=total_e;
-	  acluster.t=c_t;
-	  acluster.nhits=nhits;
-	  allc.c[nclust]=acluster;
-	  nclust++;
-	}
+    if(fadc_hits.vxs_ch[ch].t<4){
+      fadc_disc = disc(fadc_hits.vxs_ch[ch], seed_threshold);
+      if(fadc_disc>0 && ch<147){
+	 Find_cluster(ch, fadc_hits_pre, fadc_hits, 0, ac);	
+	 if(ac.nhits>0){ allc.c[nclust]=ac; nclust++;}
+      }
     }
   }
 
+#ifndef __SYNTHESIS__
+  printf("nclust: %d\n",nclust);
+#endif
   if(nclust>0)s_cluster_all.write(allc);
+
+  for(int ii=0; ii<N_CLUSTER_POSITIONS;ii++){
+     if(allc.c[ii].nhits==0) continue;
+     ac_disc[ii]=disc_cluster(allc.c[ii],cluster_threshold); 
+  }
+
   
   // 'or' together result from all channels, for each possible 4ns time bin
-  for(int ch=0;ch<256;ch++)
-    trigger.trig |= fadc_disc[ch];
+  for(int ii=0;ii<N_CLUSTER_POSITIONS;ii++)
+    trigger.trig |= ac_disc[ii];
 
   // write trigger result
   s_trigger.write(trigger);
 }
 
 // build fadc map
-// for a given channel number, return the nx and ny of the channel map 
 
 typedef struct{
    int nx;
@@ -116,6 +116,7 @@ block_coords block_map[10][16]={
        { {18,11},{18,12},{18,13},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0} }
 }; 
 
+// for a given channel number, return the nx and ny of the channel map 
 void Find_block(int ch, int& nx, int& ny){
   nx=0; ny=0;
 
@@ -127,6 +128,7 @@ void Find_block(int ch, int& nx, int& ny){
   return;
 }
 
+// for a given (x,y), return the channel number
 int Find_channel(int nx, int ny){
   int slot=0, ich=0;
   int ch=-1;
@@ -145,7 +147,88 @@ int Find_channel(int nx, int ny){
    if(found==1) break;
   }
 
-  if(found=1) ch = 16*slot+ich;
+  if(found==1) ch = 16*slot+ich;
 
   return ch;
 }
+
+void Find_cluster(int ch, fadc_hits_t fadc_hits_pre, fadc_hits_t fadc_hits, ap_uint<1> ispre,cluster_t& acluster){
+     int nx=0, ny=0;
+     Find_block(ch,nx,ny);
+     if(nx<1 || ny<1){ 
+#ifndef __SYNTHESIS__
+        printf("couldn't find the block number for chan %d\n",ch);
+#endif
+        return;
+     }
+
+     int ch_nearby[6]={-1};	
+         
+     ch_nearby[0] = Find_channel(nx-1, ny-1);  // left up
+     ch_nearby[1] = Find_channel(nx-1, ny);  // left down
+     ch_nearby[2] = Find_channel(nx, ny-1);  // middle up
+     ch_nearby[3] = Find_channel(nx, ny+1);  // middle down
+     ch_nearby[4] = Find_channel(nx+1, ny);  // right up
+     ch_nearby[5] = Find_channel(nx+1, ny+1);  // right down
+
+     ap_uint<13> c_e;
+     ap_uint<3>  c_t;
+
+     if(ispre==1){
+	c_e = fadc_hits_pre.vxs_ch[ch].e;
+	c_t = fadc_hits_pre.vxs_ch[ch].t-4;
+     }
+     else{
+	c_e = fadc_hits.vxs_ch[ch].e;
+	c_t = fadc_hits.vxs_ch[ch].t+4;
+     }
+
+     ap_uint<16> total_e=c_e;
+     ap_uint<4>  nhits=1;
+     // find the if the center block is maximum both in e and t (could use vector and sort function here, not sure which one will be faster)
+     bool found=true;
+     for(int ii=0; ii<6; ii++){
+	if(ch_nearby[ii]>=0 && ch_nearby[ii]<147){
+
+	   ap_uint<3> tmp_t = fadc_hits_pre.vxs_ch[ch_nearby[ii]].t;
+
+	   if( tmp_t>=4 ){
+	     ap_uint<13> tmp_e = fadc_hits_pre.vxs_ch[ch_nearby[ii]].e;
+	     int dt = ((tmp_t-4)-c_t)*4; // ns
+	     if(fabs(dt)<8 && c_e<tmp_e){found=false; break;}   // couldn't be the center of a cluster
+             if(fabs(dt)<8 && c_e>=tmp_e)  {total_e=total_e+tmp_e; nhits++;}
+	   }
+
+	   tmp_t = fadc_hits.vxs_ch[ch_nearby[ii]].t;
+
+	   if( tmp_t<4 ){
+	     ap_uint<13> tmp_e = fadc_hits.vxs_ch[ch_nearby[ii]].e;
+	     int dt = ((tmp_t+4)-c_t)*4; //ns
+	     if(fabs(dt)<8 && c_e<tmp_e){found=false; break;}   // couldn't be the center of a cluster
+             if(fabs(dt)<8 && c_e>=tmp_e)  {total_e=total_e+tmp_e; nhits++;}
+	   }
+	}	
+     }
+
+     if(found){
+#ifndef __SYNTHESIS__
+       printf("find cluster at (%d,%d), e=%d, t=%d, nhits=%d\n",nx,ny,total_e.to_uint(),c_t.to_uint(),nhits.to_uint());
+#endif
+       acluster.x=nx;
+       acluster.y=ny;
+       acluster.e=total_e;
+       acluster.t=c_t;
+       acluster.nhits=nhits;
+     }
+     else{
+       acluster.x=0;
+       acluster.y=0;
+       acluster.e=0;
+       acluster.t=0;
+       acluster.nhits=0;
+     }
+     return;
+}
+
+
+

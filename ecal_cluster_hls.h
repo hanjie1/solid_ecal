@@ -46,11 +46,11 @@ typedef struct
   ap_uint<5> x;
   ap_uint<4> y;
   ap_uint<16> e;
-  ap_uint<11> t;
-  ap_uint<3>  nhits;
+  ap_uint<3> t;
+  ap_uint<4>  nhits;
 } cluster_t;
 
-#define N_CLUSTER_POSITIONS   147   // not sure exactly what this number will be - define this number based on the number of possible cluster positions in 1 sector
+#define N_CLUSTER_POSITIONS   20   // not sure exactly what this number will be - define this number based on the number of possible cluster positions in 1 sector
 
 typedef struct
 {
@@ -69,6 +69,7 @@ void ecal_cluster_hls(
     ap_uint<3> hit_dt,
     ap_uint<13> seed_threshold,
     ap_uint<16> cluster_threshold,
+    hls::stream<fadc_hits_t> &s_fadc_hits_pre,
     hls::stream<fadc_hits_t> &s_fadc_hits,
     hls::stream<trigger_t> &s_trigger,
     hls::stream<cluster_all_t> &s_cluster_all
@@ -76,6 +77,7 @@ void ecal_cluster_hls(
 
 void Find_block(int ch, int& nx, int& ny); // return the nx and ny of the fadc channel
 int Find_channel(int nx, int ny);   // return the channel number of the block(nx, ny)
+void Find_cluster(int ch, fadc_hits_t fadc_hits_pre, fadc_hits_t fadc_hits, ap_uint<1> ispre,cluster_t& acluster);
 
 
 #endif
