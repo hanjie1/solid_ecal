@@ -1,0 +1,68 @@
+<AutoPilot:ProjectResources xmlns:AutoPilot="com.autoesl.autopilot.ui.directiveView">
+    <sourceFile name="">
+        <directive functionName="ecal_cluster_hls" label="" functionLabel="">
+            <pragma name="PIPELINE">
+                <option name="enable_flush" value="" positionalBoolean="1"/>
+            </pragma>
+        </directive>
+        <directive functionName="ecal_cluster_hls" label="" functionLabel="">
+            <pragma name="DATA_PACK">
+                <option name="variable" value="s_fadc_hits" positionalBoolean="4"/>
+            </pragma>
+        </directive>
+        <directive functionName="ecal_cluster_hls" label="" functionLabel="">
+            <pragma name="ARRAY_PARTITION">
+                <option name="variable" value="fadc_disc_time" positionalBoolean="4"/>
+                <option name="complete" value="" positionalBoolean="type"/>
+                <option name="dim" value="1"/>
+            </pragma>
+        </directive>
+        <directive functionName="ecal_cluster_hls" label="" functionLabel="">
+            <pragma name="INTERFACE">
+                <option name="ap_stable" value="" positionalBoolean="mode"/>
+                <option name="port" value="hit_dt" positionalBoolean="4"/>
+            </pragma>
+        </directive>
+        <directive functionName="ecal_cluster_hls" label="" functionLabel="">
+            <pragma name="INTERFACE">
+                <option name="ap_stable" value="" positionalBoolean="mode"/>
+                <option name="port" value="seed_threshold" positionalBoolean="4"/>
+            </pragma>
+        </directive>
+        <directive functionName="ecal_cluster_hls" label="" functionLabel="">
+            <pragma name="INTERFACE">
+                <option name="ap_stable" value="" positionalBoolean="mode"/>
+                <option name="port" value="cluster_threshold" positionalBoolean="4"/>
+            </pragma>
+        </directive>
+        <directive functionName="ecal_cluster_hls" label="" functionLabel="">
+            <pragma name="ARRAY_PARTITION">
+                <option name="variable" value="fadc_hits.vxs_ch" positionalBoolean="4"/>
+                <option name="complete" value="" positionalBoolean="type"/>
+                <option name="dim" value="1"/>
+            </pragma>
+        </directive>
+        <directive functionName="ecal_cluster_hls" label="" functionLabel="">
+            <pragma name="ARRAY_PARTITION">
+                <option name="variable" value="fadc_hits.fiber_ch_l" positionalBoolean="4"/>
+                <option name="complete" value="" positionalBoolean="type"/>
+                <option name="dim" value="1"/>
+            </pragma>
+        </directive>
+        <directive functionName="ecal_cluster_hls" label="" functionLabel="">
+            <pragma name="ARRAY_PARTITION">
+                <option name="variable" value="fadc_hits.fiber_ch_r" positionalBoolean="4"/>
+                <option name="complete" value="" positionalBoolean="type"/>
+                <option name="dim" value="1"/>
+            </pragma>
+        </directive>
+        <directive functionName="ecal_cluster_hls" label="" functionLabel="">
+            <pragma name="ARRAY_PARTITION">
+                <option name="variable" value="fadc_disc" positionalBoolean="4"/>
+                <option name="complete" value="" positionalBoolean="type"/>
+                <option name="dim" value="1"/>
+            </pragma>
+        </directive>
+    </sourceFile>
+</AutoPilot:ProjectResources>
+
