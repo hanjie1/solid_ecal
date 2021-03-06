@@ -14,6 +14,14 @@ typedef struct
   ap_uint<3> t;
 } hit_t;
 
+typedef struct
+{
+  ap_uint<13> e;
+  ap_uint<3> t;
+  ap_uint<8> ch;  // channel number
+  ap_uint<1> ispre; // if it's from previous fadc_hits: 1: it's previous hit, 0: it's current hit
+} seed_hit_t;   // hit_t that passes the seed_threshold
+
 // fadc_hits_t:
 // - contains 256 VXS channels worth + 32 left fiber + 32 right fiber of hit_t reported each 32ns
 // - vxs_ch[  0] to vxs_ch[ 15]: VME slot 3, ch 0 to 15 FADC channels
@@ -51,11 +59,10 @@ typedef struct
   ap_uint<4>  nhits;
 } cluster_t;
 
-#define N_CLUSTER_POSITIONS   20   // not sure exactly what this number will be - define this number based on the number of possible cluster positions in 1 sector
 
 typedef struct
 {
-  cluster_t c[N_CLUSTER_POSITIONS];
+  cluster_t c[N_CHAN_SEC];
 } cluster_all_t;
 
 // trigger_t:
@@ -70,7 +77,6 @@ void ecal_cluster_hls(
     ap_uint<3> hit_dt,
     ap_uint<13> seed_threshold,
     ap_uint<16> cluster_threshold,
-    hls::stream<fadc_hits_t> &s_fadc_hits_pre,
     hls::stream<fadc_hits_t> &s_fadc_hits,
     hls::stream<trigger_t> &s_trigger,
     hls::stream<cluster_all_t> &s_cluster_all
@@ -78,7 +84,9 @@ void ecal_cluster_hls(
 
 void Find_block(int ch, int& nx, int& ny); // return the nx and ny of the fadc channel
 int Find_channel(int nx, int ny);   // return the channel number of the block(nx, ny)
-void Find_cluster(int ch, fadc_hits_t fadc_hits_pre, fadc_hits_t fadc_hits, ap_uint<1> ispre,cluster_t& acluster);
+void Find_cluster(seed_hit_t seed_hit, seed_hit_t prehits[6],seed_hit_t curhits[6],cluster_t& acluster);
+void Find_nearby(int ch, int (&ch_nearby)[6], int& nx, int& ny);
+
 
 
 #endif

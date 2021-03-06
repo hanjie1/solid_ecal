@@ -8,7 +8,6 @@ int main(int argc, char *argv[])
   ap_uint<13> seed_threshold = 2000;
   ap_uint<16> cluster_threshold = 2000;
   hls::stream<fadc_hits_t> s_fadc_hits;
-  hls::stream<fadc_hits_t> s_fadc_hits_pre;     // previous frame hits
   hls::stream<trigger_t> s_trigger, s_trigger_verify;
   hls::stream<cluster_all_t> s_cluster_all;
 
@@ -20,7 +19,6 @@ int main(int argc, char *argv[])
   for(int frame=0;frame<4;frame++)
   {
     trigger.trig = 0;
-    if(frame>0) s_fadc_hits_pre.write(fadc_hits);   
  
     for(int ch=0;ch<N_CHAN_SEC;ch++)
     {
@@ -53,32 +51,28 @@ int main(int argc, char *argv[])
         fadc_hits.vxs_ch[ch].t = 0;
       }
     }
-    if(frame>0) s_fadc_hits.write(fadc_hits);
+    s_fadc_hits.write(fadc_hits);
     //s_trigger_verify.write(trigger);
   }
 
-  while(!s_fadc_hits_pre.empty())
+  while(!s_fadc_hits.empty())
   {
     ecal_cluster_hls(
         hit_dt,
         seed_threshold,
         cluster_threshold,
-        s_fadc_hits_pre,
         s_fadc_hits,
         s_trigger,
         s_cluster_all
       );
   }
 
-  while(!s_fadc_hits.empty())
-    fadc_hits_t tmp_hits=s_fadc_hits.read(); 
-
   int t32ns=0;
   while(!s_cluster_all.empty()){
     cluster_all_t C = s_cluster_all.read();
 
 #ifndef __SYNTHESIS__
-    for(int nc=0; nc<N_CLUSTER_POSITIONS; nc++){
+    for(int nc=0; nc<N_CHAN_SEC; nc++){
       cluster_t cl=C.c[nc];
       if(cl.nhits!=0){
 	 int tmpx=cl.x.to_uint();
