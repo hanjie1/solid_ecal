@@ -27,6 +27,7 @@
 								<option id="gnu.cpp.compiler.option.include.paths.1040157615" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="/opt/Xilinx/Vivado/2017.4/include"/>
 									<listOptionValue builtIn="false" value="/opt/Xilinx/Vivado/2017.4/include/ap_sysc"/>
+									<listOptionValue builtIn="false" value="/home/hanjie/SOLID_prerd/ECAL"/>
 									<listOptionValue builtIn="false" value="/opt/Xilinx/Vivado/2017.4/lnx64/tools/systemc/include"/>
 									<listOptionValue builtIn="false" value="/opt/Xilinx/Vivado/2017.4/lnx64/tools/auto_cc/include"/>
 									<listOptionValue builtIn="false" value="/opt/Xilinx/Vivado/2017.4/include/etc"/>
@@ -44,6 +45,7 @@
 								<option id="gnu.c.compiler.option.include.paths.574673956" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="/opt/Xilinx/Vivado/2017.4/include"/>
 									<listOptionValue builtIn="false" value="/opt/Xilinx/Vivado/2017.4/include/ap_sysc"/>
+									<listOptionValue builtIn="false" value="/home/hanjie/SOLID_prerd/ECAL"/>
 									<listOptionValue builtIn="false" value="/opt/Xilinx/Vivado/2017.4/lnx64/tools/systemc/include"/>
 									<listOptionValue builtIn="false" value="/opt/Xilinx/Vivado/2017.4/lnx64/tools/auto_cc/include"/>
 									<listOptionValue builtIn="false" value="/opt/Xilinx/Vivado/2017.4/include/etc"/>
@@ -111,6 +113,7 @@
 								<option id="gnu.cpp.compiler.option.include.paths.128257447" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="/opt/Xilinx/Vivado/2017.4/include"/>
 									<listOptionValue builtIn="false" value="/opt/Xilinx/Vivado/2017.4/include/ap_sysc"/>
+									<listOptionValue builtIn="false" value="/home/hanjie/SOLID_prerd/ECAL"/>
 									<listOptionValue builtIn="false" value="/opt/Xilinx/Vivado/2017.4/lnx64/tools/systemc/include"/>
 									<listOptionValue builtIn="false" value="/opt/Xilinx/Vivado/2017.4/lnx64/tools/auto_cc/include"/>
 									<listOptionValue builtIn="false" value="/opt/Xilinx/Vivado/2017.4/include/etc"/>
@@ -123,6 +126,7 @@
 								<option id="gnu.c.compiler.option.include.paths.1854002663" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="/opt/Xilinx/Vivado/2017.4/include"/>
 									<listOptionValue builtIn="false" value="/opt/Xilinx/Vivado/2017.4/include/ap_sysc"/>
+									<listOptionValue builtIn="false" value="/home/hanjie/SOLID_prerd/ECAL"/>
 									<listOptionValue builtIn="false" value="/opt/Xilinx/Vivado/2017.4/lnx64/tools/systemc/include"/>
 									<listOptionValue builtIn="false" value="/opt/Xilinx/Vivado/2017.4/lnx64/tools/auto_cc/include"/>
 									<listOptionValue builtIn="false" value="/opt/Xilinx/Vivado/2017.4/include/etc"/>

@@ -4,7 +4,7 @@
 
 int main(int argc, char *argv[])
 {
-  ap_uint<3> hit_dt = 8;
+  ap_uint<3> hit_dt = 7;
   ap_uint<13> seed_threshold = 2000;
   ap_uint<16> cluster_threshold = 2000;
   hls::stream<fadc_hits_t> s_fadc_hits;
@@ -78,7 +78,9 @@ int main(int argc, char *argv[])
 	 int tmpx=cl.x.to_uint();
 	 int tmpy=cl.y.to_uint();
 	 int tmpe=cl.e.to_uint();
-	 int tmpt=cl.t.to_uint()*4+16+t32ns*32;
+	 int tmpt=0;
+         if(t32ns==0)tmpt=cl.t.to_uint()*4;
+         else tmpt=cl.t.to_uint()*4+32*t32ns-16;
 	 int tmpn=cl.nhits.to_uint();
          printf("cluster at block(%d,%d): e=%d, t=%d, nhits=%d\n",tmpx, tmpy, tmpe, tmpt, tmpn); 
       }
@@ -98,7 +100,8 @@ int main(int argc, char *argv[])
     for(int i=0;i<8;i++)
     {
       if(trigger.trig[i])
-        printf("Trigger found at T=%dns\n", t32ns*32+i*4+16);
+        if(t32ns==0)printf("Trigger found at T=%dns\n", i*4);
+        else printf("Trigger found at T=%dns\n", t32ns*32+i*4-16);
     }
 #endif
     t32ns++;

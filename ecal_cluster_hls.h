@@ -84,7 +84,7 @@ void ecal_cluster_hls(
 
 void Find_block(int ch, int& nx, int& ny); // return the nx and ny of the fadc channel
 int Find_channel(int nx, int ny);   // return the channel number of the block(nx, ny)
-void Find_cluster(seed_hit_t seed_hit, seed_hit_t prehits[6],seed_hit_t curhits[6],cluster_t& acluster);
+void Find_cluster(seed_hit_t seed_hit, seed_hit_t prehits[6],seed_hit_t curhits[6],ap_uint<3> hit_dt,cluster_t& acluster);
 void Find_nearby(int ch, int (&ch_nearby)[6], int& nx, int& ny);
 
 

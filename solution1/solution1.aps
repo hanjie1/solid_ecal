@@ -2,12 +2,6 @@
     <checksum>
         <value string="false"/>
     </checksum>
-    <downStreamTool>
-        <DownStreamTool name="vivado"/>
-    </downStreamTool>
-    <clockList>
-        <clock default="false" name="default" period="32" uncertainty="4"/>
-    </clockList>
     <config>
         <schedule model="ecal_cluster_hls"/>
     </config>
@@ -70,5 +64,11 @@
         <library name="DefaultPlatform" value="xilinx/virtex7/virtex7"/>
         <library name="DefaultPlatform" value="xilinx/virtex7/virtex7_fpv6"/>
     </libraryList>
+    <downStreamTool>
+        <DownStreamTool name="vivado"/>
+    </downStreamTool>
+    <clockList>
+        <clock default="false" name="default" uncertainty="4" period="32"/>
+    </clockList>
 </solution>
 

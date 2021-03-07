@@ -42,7 +42,8 @@ void ecal_cluster_hls(
 {
   // example trigger (is any FADC hit over threshold): reading fadc hit steam, and writing trigger stream
   fadc_hits_t fadc_hits = s_fadc_hits.read();
-  static fadc_hits_t fadc_hits_pre = {{0},{0},{0}};
+  static fadc_hits_t fadc_hits_pre = {{0,0},{0,0},{0,0}};
+  static bool isfirst=true;
   ap_uint<8> fadc_disc;
   ap_uint<8> ac_disc[N_CHAN_SEC];
   trigger_t trigger = {0};
@@ -67,6 +68,9 @@ void ecal_cluster_hls(
 	 seed_hit.t=fadc_hits_pre.vxs_ch[ch].t;	
 	 seed_hit.ispre=1;
 	 s_seed_hit.write(seed_hit);
+#ifndef __SYNTHESIS__
+ //      printf("pre seed hit ch=%d, e=%d, t=%d\n",ch,seed_hit.e.to_uint(),seed_hit.t.to_uint());
+#endif
       }
  
       if(fadc_hits.vxs_ch[ch].e>seed_threshold && fadc_hits.vxs_ch[ch].t<4){
@@ -75,6 +79,9 @@ void ecal_cluster_hls(
 	 seed_hit.t=fadc_hits.vxs_ch[ch].t;	
 	 seed_hit.ispre=0;
 	 s_seed_hit.write(seed_hit);
+#ifndef __SYNTHESIS__
+//       printf("seed hit ch=%d, e=%d, t=%d\n",ch,seed_hit.e.to_uint(),seed_hit.t.to_uint());
+#endif
       }
   }
 
@@ -87,8 +94,8 @@ void ecal_cluster_hls(
      int ch_nearby[6]={-1};
      Find_nearby(ch,ch_nearby,nx,ny); 
      
-     seed_hit_t nearby_hits[6]={0};
-     seed_hit_t nearby_hits_pre[6]={0};
+     seed_hit_t nearby_hits[6];
+     seed_hit_t nearby_hits_pre[6];
      for(int ii=0; ii<6; ii++){
 	if(ch_nearby[ii]>=0 && ch_nearby[ii]<N_CHAN_SEC){
 	  int tmpch=ch_nearby[ii];
@@ -101,15 +108,33 @@ void ecal_cluster_hls(
  	  nearby_hits_pre[ii].t=fadc_hits_pre.vxs_ch[tmpch].t;
 	  nearby_hits_pre[ii].ch=tmpch;
 	  nearby_hits_pre[ii].ispre=1;
+#ifndef __SYNTHESIS__
+//       printf("nearby pre hit ch=%d, e=%d, t=%d\n",ch_nearby[ii],nearby_hits_pre[ii].e.to_uint(),nearby_hits_pre[ii].t.to_uint());
+//       printf("nearby hit ch=%d, e=%d, t=%d\n",ch_nearby[ii],nearby_hits[ii].e.to_uint(),nearby_hits[ii].t.to_uint());
+#endif
         }
+	else{
+	  nearby_hits[ii].e=0;
+	  nearby_hits[ii].t=0;
+	  nearby_hits[ii].ch=0;
+	  nearby_hits[ii].ispre=0;
+
+	  nearby_hits_pre[ii].e=0;
+ 	  nearby_hits_pre[ii].t=0;
+	  nearby_hits_pre[ii].ch=0;
+	  nearby_hits_pre[ii].ispre=1;
+	}
      }
 
-     Find_cluster(a_seed_hit, nearby_hits, nearby_hits_pre, ac);
+     Find_cluster(a_seed_hit, nearby_hits_pre, nearby_hits,hit_dt, ac);
 
      if(ac.nhits>1){ 
 #ifndef __SYNTHESIS__
        printf("find cluster at (%d,%d), e=%d, t=%d, nhits=%d\n",nx,ny,ac.e.to_uint(),ac.t.to_uint(),ac.nhits.to_uint());
 #endif
+       if(isfirst){ac.t=a_seed_hit.t; isfirst=false;}
+       else if(a_seed_hit.ispre==1) ac.t=a_seed_hit.t-4;
+       else ac.t=a_seed_hit.t+4;
        ac.x=nx;
        ac.y=ny;
        allc.c[nclust]=ac; 
@@ -214,7 +239,7 @@ void Find_nearby(int ch, int (& ch_nearby)[6], int& nx, int& ny){
      return;
 }
 
-void Find_cluster(seed_hit_t seed_hit, seed_hit_t prehits[6],seed_hit_t curhits[6],cluster_t& acluster){
+void Find_cluster(seed_hit_t seed_hit, seed_hit_t prehits[6],seed_hit_t curhits[6],ap_uint<3> hit_dt, cluster_t& acluster){
 
      ap_uint<13> c_e=seed_hit.e;
      ap_uint<3>  c_t;
@@ -237,8 +262,8 @@ void Find_cluster(seed_hit_t seed_hit, seed_hit_t prehits[6],seed_hit_t curhits[
 
 	   if( tmp_e>0){
 	     int dt = ((tmp_t-4)-c_t)*4; // ns
-	     if(fabs(dt)<=8 && c_e<tmp_e){found=false; break;}   // couldn't be the center of a cluster
-             if(fabs(dt)<=8 && c_e>=tmp_e)  {
+	     if(fabs(dt)<=(hit_dt+1) && c_e<tmp_e){found=false; break;}   // couldn't be the center of a cluster
+             if(fabs(dt)<=(hit_dt+1) && c_e>=tmp_e)  {
 	        total_e=total_e+tmp_e; 
 	        nhits++;
 #ifndef __SYNTHESIS__
@@ -268,7 +293,7 @@ void Find_cluster(seed_hit_t seed_hit, seed_hit_t prehits[6],seed_hit_t curhits[
        acluster.x=0;
        acluster.y=0;
        acluster.e=total_e;
-       acluster.t=c_t;
+       acluster.t=seed_hit.t;
        acluster.nhits=nhits;
      }
      else{
