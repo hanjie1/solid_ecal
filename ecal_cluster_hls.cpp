@@ -49,7 +49,7 @@ void ecal_cluster_hls(
   trigger_t trigger = {0};
   cluster_all_t allc;
   cluster_t ac;
-  hls::stream<seed_hit_t> s_seed_hit; 
+  seed_hit_t s_seed_hit[2*N_CHAN_SEC]; 
 
   for(int ii=0; ii<N_CHAN_SEC;ii++){
       allc.c[ii].x=0;
@@ -58,6 +58,15 @@ void ecal_cluster_hls(
       allc.c[ii].t=0;
       allc.c[ii].nhits=0;
       ac_disc[ii]=0;
+
+      s_seed_hit[ii].e=0;
+      s_seed_hit[ii].t=0;
+      s_seed_hit[ii].ch=0;
+      s_seed_hit[ii].ispre=0;
+      s_seed_hit[ii+N_CHAN_SEC].e=0;
+      s_seed_hit[ii+N_CHAN_SEC].t=0;
+      s_seed_hit[ii+N_CHAN_SEC].ch=0;
+      s_seed_hit[ii+N_CHAN_SEC].ispre=0;
   }
 
   seed_hit_t seed_hit;
@@ -67,7 +76,7 @@ void ecal_cluster_hls(
 	 seed_hit.e=fadc_hits_pre.vxs_ch[ch].e;
 	 seed_hit.t=fadc_hits_pre.vxs_ch[ch].t;	
 	 seed_hit.ispre=1;
-	 s_seed_hit.write(seed_hit);
+	 s_seed_hit[ch]=seed_hit;
 #ifndef __SYNTHESIS__
  //      printf("pre seed hit ch=%d, e=%d, t=%d\n",ch,seed_hit.e.to_uint(),seed_hit.t.to_uint());
 #endif
@@ -78,7 +87,7 @@ void ecal_cluster_hls(
 	 seed_hit.e=fadc_hits.vxs_ch[ch].e;
 	 seed_hit.t=fadc_hits.vxs_ch[ch].t;	
 	 seed_hit.ispre=0;
-	 s_seed_hit.write(seed_hit);
+	 s_seed_hit[ch+N_CHAN_SEC]=seed_hit;
 #ifndef __SYNTHESIS__
 //       printf("seed hit ch=%d, e=%d, t=%d\n",ch,seed_hit.e.to_uint(),seed_hit.t.to_uint());
 #endif
@@ -86,8 +95,10 @@ void ecal_cluster_hls(
   }
 
   int nclust=0;
-  while(!s_seed_hit.empty()){
-     seed_hit_t a_seed_hit = s_seed_hit.read();
+  for(int ich=0; ich<2*N_CHAN_SEC;ich++){
+     if(s_seed_hit[ich].e==0) continue;
+
+     seed_hit_t a_seed_hit = s_seed_hit[ich];
      int ch=a_seed_hit.ch; 
      int nx=0;
      int ny=0;
@@ -137,7 +148,7 @@ void ecal_cluster_hls(
        else ac.t=a_seed_hit.t+4;
        ac.x=nx;
        ac.y=ny;
-       allc.c[nclust]=ac; 
+       allc.c[ch]=ac; 
        nclust++;
      }
   }
