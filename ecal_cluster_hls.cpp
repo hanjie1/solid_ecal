@@ -49,7 +49,7 @@ void ecal_cluster_hls(
   trigger_t trigger = {0};
   cluster_all_t allc;
   cluster_t ac;
-  seed_hit_t s_seed_hit[2*N_CHAN_SEC]; 
+  seed_hit_t s_seed_hit[N_CHAN_SEC]; 
 
   for(int ii=0; ii<N_CHAN_SEC;ii++){
       allc.c[ii].x=0;
@@ -63,10 +63,6 @@ void ecal_cluster_hls(
       s_seed_hit[ii].t=0;
       s_seed_hit[ii].ch=0;
       s_seed_hit[ii].ispre=0;
-      s_seed_hit[ii+N_CHAN_SEC].e=0;
-      s_seed_hit[ii+N_CHAN_SEC].t=0;
-      s_seed_hit[ii+N_CHAN_SEC].ch=0;
-      s_seed_hit[ii+N_CHAN_SEC].ispre=0;
   }
 
   seed_hit_t seed_hit;
@@ -81,13 +77,12 @@ void ecal_cluster_hls(
  //      printf("pre seed hit ch=%d, e=%d, t=%d\n",ch,seed_hit.e.to_uint(),seed_hit.t.to_uint());
 #endif
       }
- 
-      if(fadc_hits.vxs_ch[ch].e>seed_threshold && fadc_hits.vxs_ch[ch].t<4){
+      else if(fadc_hits.vxs_ch[ch].e>seed_threshold && fadc_hits.vxs_ch[ch].t<4){
 	 seed_hit.ch=ch;
 	 seed_hit.e=fadc_hits.vxs_ch[ch].e;
 	 seed_hit.t=fadc_hits.vxs_ch[ch].t;	
 	 seed_hit.ispre=0;
-	 s_seed_hit[ch+N_CHAN_SEC]=seed_hit;
+	 s_seed_hit[ch]=seed_hit;
 #ifndef __SYNTHESIS__
 //       printf("seed hit ch=%d, e=%d, t=%d\n",ch,seed_hit.e.to_uint(),seed_hit.t.to_uint());
 #endif
@@ -95,15 +90,14 @@ void ecal_cluster_hls(
   }
 
   int nclust=0;
-  for(int ich=0; ich<2*N_CHAN_SEC;ich++){
+  for(int ich=0; ich<N_CHAN_SEC;ich++){
      if(s_seed_hit[ich].e==0) continue;
 
      seed_hit_t a_seed_hit = s_seed_hit[ich];
-     int ch=a_seed_hit.ch; 
      int nx=0;
      int ny=0;
      int ch_nearby[6]={-1};
-     Find_nearby(ch,ch_nearby,nx,ny); 
+     Find_nearby(ich,ch_nearby,nx,ny); 
      
      seed_hit_t nearby_hits[6];
      seed_hit_t nearby_hits_pre[6];
@@ -148,7 +142,7 @@ void ecal_cluster_hls(
        else ac.t=a_seed_hit.t+4;
        ac.x=nx;
        ac.y=ny;
-       allc.c[ch]=ac; 
+       allc.c[ich]=ac; 
        nclust++;
      }
   }
@@ -266,10 +260,12 @@ void Find_cluster(seed_hit_t seed_hit, seed_hit_t prehits[6],seed_hit_t curhits[
      // find the if the center block is maximum both in e and t (could use vector and sort function here, not sure which one will be faster)
      bool found=true;
      for(int ii=0; ii<6; ii++){
+	ap_uint<3> tmp_t=0;
+	ap_uint<13> tmp_e=0;
 	if( prehits[ii].ch>=0 && prehits[ii].ch<N_CHAN_SEC ){
 
-	   ap_uint<3> tmp_t = prehits[ii].t;
-	   ap_uint<13> tmp_e = prehits[ii].e;
+	   tmp_t = prehits[ii].t;
+	   tmp_e = prehits[ii].e;
 
 	   if( tmp_e>0){
 	     int dt = ((tmp_t-4)-c_t)*4; // ns
@@ -282,7 +278,9 @@ void Find_cluster(seed_hit_t seed_hit, seed_hit_t prehits[6],seed_hit_t curhits[
 #endif
 	     }
 	   }
+        }
 
+	if( curhits[ii].ch>=0 && curhits[ii].ch<N_CHAN_SEC ){
 	   tmp_t = curhits[ii].t;
 	   tmp_e = curhits[ii].e;
 
