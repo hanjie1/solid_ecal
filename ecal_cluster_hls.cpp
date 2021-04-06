@@ -1,16 +1,5 @@
 #include "ecal_cluster_hls.h"
 
-ap_uint<8> disc(hit_t hit, ap_uint<13> seed_threshold)
-{
-  ap_uint<8> result = 0;
-
-  // discriminate and report correct 4ns time bin that threshold crossing happened
-  if(hit.e >= seed_threshold)
-    result[hit.t] = 1;
-
-  return result;
-}
-
 ap_uint<8> disc_cluster(cluster_t ac, ap_uint<16> cluster_threshold)
 {
   ap_uint<8> result = 0;
@@ -42,118 +31,84 @@ void ecal_cluster_hls(
 {
   // example trigger (is any FADC hit over threshold): reading fadc hit steam, and writing trigger stream
   fadc_hits_t fadc_hits = s_fadc_hits.read();
-  static fadc_hits_t fadc_hits_pre = {{0,0},{0,0},{0,0}};
-  static bool isfirst=true;
-  ap_uint<8> fadc_disc;
+  static fadc_hits_t fadc_hits_pre;
   ap_uint<8> ac_disc[N_CHAN_SEC];
   trigger_t trigger = {0};
   cluster_all_t allc;
   cluster_t ac;
-  seed_hit_t s_seed_hit[N_CHAN_SEC]; 
-
-  for(int ii=0; ii<N_CHAN_SEC;ii++){
-      allc.c[ii].x=0;
-      allc.c[ii].y=0;
-      allc.c[ii].e=0;
-      allc.c[ii].t=0;
-      allc.c[ii].nhits=0;
-      ac_disc[ii]=0;
-
-      s_seed_hit[ii].e=0;
-      s_seed_hit[ii].t=0;
-      s_seed_hit[ii].ch=0;
-      s_seed_hit[ii].ispre=0;
-  }
-
-  seed_hit_t seed_hit;
-  for(int ch=0; ch<N_CHAN_SEC;ch++){
-      if(fadc_hits_pre.vxs_ch[ch].e>seed_threshold && fadc_hits_pre.vxs_ch[ch].t>=4){
-	 seed_hit.ch=ch;
-	 seed_hit.e=fadc_hits_pre.vxs_ch[ch].e;
-	 seed_hit.t=fadc_hits_pre.vxs_ch[ch].t;	
-	 seed_hit.ispre=1;
-	 s_seed_hit[ch]=seed_hit;
-#ifndef __SYNTHESIS__
- //      printf("pre seed hit ch=%d, e=%d, t=%d\n",ch,seed_hit.e.to_uint(),seed_hit.t.to_uint());
-#endif
-      }
-      else if(fadc_hits.vxs_ch[ch].e>seed_threshold && fadc_hits.vxs_ch[ch].t<4){
-	 seed_hit.ch=ch;
-	 seed_hit.e=fadc_hits.vxs_ch[ch].e;
-	 seed_hit.t=fadc_hits.vxs_ch[ch].t;	
-	 seed_hit.ispre=0;
-	 s_seed_hit[ch]=seed_hit;
-#ifndef __SYNTHESIS__
-//       printf("seed hit ch=%d, e=%d, t=%d\n",ch,seed_hit.e.to_uint(),seed_hit.t.to_uint());
-#endif
-      }
-  }
+  static bool isfirst=true;
 
   int nclust=0;
-  for(int ich=0; ich<N_CHAN_SEC;ich++){
-     if(s_seed_hit[ich].e==0) continue;
+  hit_t seed_hit;
+  hit_t nearby_hit;
+  
+  for(int ch=0; ch<N_CHAN_SEC;ch++){
+      seed_hit.e=0;
+      seed_hit.t=0;
+      ap_uint<1> ispre=0;
+      if(fadc_hits_pre.vxs_ch[ch].e>seed_threshold && fadc_hits_pre.vxs_ch[ch].t>=4 && isfirst==false){
+	   seed_hit.e=fadc_hits_pre.vxs_ch[ch].e;
+	   seed_hit.t=fadc_hits_pre.vxs_ch[ch].t-4;
+	   ispre=1;
+      }
 
-     seed_hit_t a_seed_hit = s_seed_hit[ich];
-     int nx=0;
-     int ny=0;
-     int ch_nearby[6]={-1};
-     Find_nearby(ich,ch_nearby,nx,ny); 
-     
-     seed_hit_t nearby_hits[6];
-     seed_hit_t nearby_hits_pre[6];
-     for(int ii=0; ii<6; ii++){
-	if(ch_nearby[ii]>=0 && ch_nearby[ii]<N_CHAN_SEC){
-	  int tmpch=ch_nearby[ii];
-	  nearby_hits[ii].e=fadc_hits.vxs_ch[tmpch].e;
-	  nearby_hits[ii].t=fadc_hits.vxs_ch[tmpch].t;
-	  nearby_hits[ii].ch=tmpch;
-	  nearby_hits[ii].ispre=0;
+      if(fadc_hits.vxs_ch[ch].e>seed_threshold && fadc_hits.vxs_ch[ch].t<4){
+	   seed_hit.e=fadc_hits.vxs_ch[ch].e;
+	   seed_hit.t=fadc_hits.vxs_ch[ch].t+4;
+	   ispre=0;
+      }
 
-	  nearby_hits_pre[ii].e=fadc_hits_pre.vxs_ch[tmpch].e;
- 	  nearby_hits_pre[ii].t=fadc_hits_pre.vxs_ch[tmpch].t;
-	  nearby_hits_pre[ii].ch=tmpch;
-	  nearby_hits_pre[ii].ispre=1;
-#ifndef __SYNTHESIS__
-//       printf("nearby pre hit ch=%d, e=%d, t=%d\n",ch_nearby[ii],nearby_hits_pre[ii].e.to_uint(),nearby_hits_pre[ii].t.to_uint());
-//       printf("nearby hit ch=%d, e=%d, t=%d\n",ch_nearby[ii],nearby_hits[ii].e.to_uint(),nearby_hits[ii].t.to_uint());
-#endif
-        }
-	else{
-	  nearby_hits[ii].e=0;
-	  nearby_hits[ii].t=0;
-	  nearby_hits[ii].ch=0;
-	  nearby_hits[ii].ispre=0;
+      if(seed_hit.e>0){
+	   ap_uint<8> nearby_ch=255;
+	   hit_t nearby_hit_pre[6];
+	   hit_t nearby_hit[6];
+	   for(int in=0; in<6; in++){
+	      nearby_ch = Find_nearby(ch, in);
+	      if(nearby_ch<255){
+	       nearby_hit_pre[in].e=fadc_hits_pre.vxs_ch[nearby_ch].e;
+	       nearby_hit_pre[in].t=fadc_hits_pre.vxs_ch[nearby_ch].t;
 
-	  nearby_hits_pre[ii].e=0;
- 	  nearby_hits_pre[ii].t=0;
-	  nearby_hits_pre[ii].ch=0;
-	  nearby_hits_pre[ii].ispre=1;
-	}
-     }
+	       nearby_hit[in].e=fadc_hits.vxs_ch[nearby_ch].e;
+	       nearby_hit[in].t=fadc_hits.vxs_ch[nearby_ch].t;
+	      }
+	      else{
+	       nearby_hit_pre[in].e=0;
+	       nearby_hit_pre[in].t=0;
 
-     Find_cluster(a_seed_hit, nearby_hits_pre, nearby_hits,hit_dt, ac);
+	       nearby_hit[in].e=0;
+	       nearby_hit[in].t=0;
+	      }
+	   }
 
-     if(ac.nhits>1){ 
-#ifndef __SYNTHESIS__
-       printf("find cluster at (%d,%d), e=%d, t=%d, nhits=%d\n",nx,ny,ac.e.to_uint(),ac.t.to_uint(),ac.nhits.to_uint());
-#endif
-       if(isfirst){ac.t=a_seed_hit.t; isfirst=false;}
-       else if(a_seed_hit.ispre==1) ac.t=a_seed_hit.t-4;
-       else ac.t=a_seed_hit.t+4;
-       ac.x=nx;
-       ac.y=ny;
-       allc.c[ich]=ac; 
-       nclust++;
-     }
+	   ac=Find_cluster(seed_hit, nearby_hit_pre, nearby_hit,hit_dt);
+
+	   if(ac.nhits>1){
+	     ac.t=seed_hit.t;
+	     ac.x = Find_block(ch,0);	   	   
+	     ac.y = Find_block(ch,1);	   	   
+
+             nclust++;
+	   }
+	   else{ac.e=0; ac.t=0; ac.x=0; ac.y=0; ac.nhits=0;}
+      }
+      else{
+	  ac.e=0; ac.t=0; ac.x=0; ac.y=0; ac.nhits=0;
+      }
+      allc.c[ch] = ac;
+
   }
+     
+  fadc_hits_pre = fadc_hits; 
+  if(isfirst==true) isfirst=false;
 
 #ifndef __SYNTHESIS__
   printf("nclust: %d\n",nclust);
 #endif
-  if(nclust>0)s_cluster_all.write(allc);
+  if(nclust==0)return;
+
+  s_cluster_all.write(allc);
 
   for(int ii=0; ii<N_CHAN_SEC;ii++){
-     if(allc.c[ii].nhits==0) continue;
      ac_disc[ii]=disc_cluster(allc.c[ii],cluster_threshold); 
   }
 
@@ -166,14 +121,14 @@ void ecal_cluster_hls(
   s_trigger.write(trigger);
 
   // save the previous fadc_hits
-  fadc_hits_pre = fadc_hits; 
+  return;
 }
 
 // build fadc map
 
 typedef struct{
-   int nx;
-   int ny;
+   ap_uint<5> nx;
+   ap_uint<5> ny;
 }block_coords;
 
 block_coords block_map[10][16]={
@@ -190,130 +145,97 @@ block_coords block_map[10][16]={
 }; 
 
 // for a given channel number, return the nx and ny of the channel map 
-void Find_block(int ch, int& nx, int& ny){
-  nx=0; ny=0;
+ap_uint<5> Find_block(ap_uint<8> ch, ap_uint<1> dim){    
+  ap_uint<5> nx=0; 
+  ap_uint<5> ny=0;
 
   int slot = ch%16;  // slot number, start from 0
   int ich = ch-slot*16; // channel number inside a fadc, start from 0
 
   nx=block_map[slot][ich].nx;
   ny=block_map[slot][ich].ny;
-  return;
+
+  if( dim==0 ) return nx;
+  else return ny;
+
 }
 
 // for a given (x,y), return the channel number
-int Find_channel(int nx, int ny){
+ap_uint<8> Find_channel(ap_uint<5> nx, ap_uint<5> ny){
   int slot=0, ich=0;
-  int ch=-1;
+  ap_uint<8> ch=255;
 
   int found=0;
   for(int ii=0;ii<10;ii++){
-   found=0;
    for(int jj=0;jj<16;jj++){
       if( (block_map[ii][jj].nx==nx) && (block_map[ii][jj].ny==ny) ){
 	   slot = ii;
 	   ich = jj;
-	   found=1;
-	   break;
+	   ch = 16*slot+ich;
+	   return ch; 
       }
    }
-   if(found==1) break;
   }
-
-  if(found==1) ch = 16*slot+ich;
 
   return ch;
 }
  
-void Find_nearby(int ch, int (& ch_nearby)[6], int& nx, int& ny){
-     Find_block(ch,nx,ny);
+ap_uint<8> Find_nearby(ap_uint<8> ch, ap_uint<3> ii){
+     ap_uint<5> nx=0, ny=0;
+     nx = Find_block(ch,0);
+     ny = Find_block(ch,1);
+
      if(nx<1 || ny<1){
 #ifndef __SYNTHESIS__
-        printf("couldn't find the block number for chan %d\n",ch);
+        printf("couldn't find the block number for chan %d\n",ch.to_uint());
 #endif
-        return;
+        return 255;
      }
 
-     ch_nearby[0] = Find_channel(nx-1, ny-1);  // left up
-     ch_nearby[1] = Find_channel(nx-1, ny);  // left down
-     ch_nearby[2] = Find_channel(nx, ny-1);  // middle up
-     ch_nearby[3] = Find_channel(nx, ny+1);  // middle down
-     ch_nearby[4] = Find_channel(nx+1, ny);  // right up
-     ch_nearby[5] = Find_channel(nx+1, ny+1);  // right down
-  
-     return;
+     switch(ii){
+       case 0: return Find_channel(nx-1, ny-1); // left up
+       case 1: return Find_channel(nx-1, ny);   // left down
+       case 2: return Find_channel(nx, ny-1);   // middle up
+       case 3: return Find_channel(nx, ny+1);   // middle down
+       case 4: return Find_channel(nx+1, ny);   // right up
+       case 5: return Find_channel(nx+1, ny+1); // right down
+     }
+
+     return 255;
 }
 
-void Find_cluster(seed_hit_t seed_hit, seed_hit_t prehits[6],seed_hit_t curhits[6],ap_uint<3> hit_dt, cluster_t& acluster){
+cluster_t Find_cluster(hit_t seed_hit, hit_t prehits[6], hit_t curhits[6], ap_uint<3> hit_dt){
 
-     ap_uint<13> c_e=seed_hit.e;
-     ap_uint<3>  c_t;
-
-     ap_uint<1> ispre=seed_hit.ispre;
-     if(ispre==1)
-	c_t = seed_hit.t-4;
-     else
-	c_t = seed_hit.t+4;
-
-     ap_uint<16> total_e=c_e;
+     ap_uint<16> total_e=seed_hit.e;
      ap_uint<4>  nhits=1;
-     // find the if the center block is maximum both in e and t (could use vector and sort function here, not sure which one will be faster)
+
      bool found=true;
      for(int ii=0; ii<6; ii++){
-	ap_uint<3> tmp_t=0;
-	ap_uint<13> tmp_e=0;
-	if( prehits[ii].ch>=0 && prehits[ii].ch<N_CHAN_SEC ){
+	if(prehits[ii].e<=seed_hit.e && prehits[ii].e>0){
+            int dt = (seed_hit.t - (prehits[ii].t-4))*4;  //ns
+	    if( dt<=(hit_dt+1) && dt>=-(hit_dt+1)){
+	       total_e = total_e+prehits[ii].e;
+	       nhits++;
+	    }
+	}
 
-	   tmp_t = prehits[ii].t;
-	   tmp_e = prehits[ii].e;
-
-	   if( tmp_e>0){
-	     int dt = ((tmp_t-4)-c_t)*4; // ns
-	     if(fabs(dt)<=(hit_dt+1) && c_e<tmp_e){found=false; break;}   // couldn't be the center of a cluster
-             if(fabs(dt)<=(hit_dt+1) && c_e>=tmp_e)  {
-	        total_e=total_e+tmp_e; 
-	        nhits++;
-#ifndef __SYNTHESIS__
-       printf("%d: ch=%d, %d, e=%d, t=%d\n",nhits.to_uint(),prehits[ii].ch.to_uint(),ii,tmp_e.to_uint(),tmp_t.to_uint());
-#endif
-	     }
-	   }
-        }
-
-	if( curhits[ii].ch>=0 && curhits[ii].ch<N_CHAN_SEC ){
-	   tmp_t = curhits[ii].t;
-	   tmp_e = curhits[ii].e;
-
-	   if( tmp_e>0){
-	     int dt = ((tmp_t+4)-c_t)*4; //ns
-	     if(fabs(dt)<=8 && c_e<tmp_e){found=false; break;}   // couldn't be the center of a cluster
-             if(fabs(dt)<=8 && c_e>=tmp_e)  {
-		total_e=total_e+tmp_e; 
-		nhits++;
-#ifndef __SYNTHESIS__
-       printf("%d: ch=%d, %d, e=%d, t=%d\n",nhits.to_uint(),curhits[ii].ch.to_uint(),ii,tmp_e.to_uint(),tmp_t.to_uint());
-#endif
-	     }
-	   }
-	}	
+	if(curhits[ii].e<=seed_hit.e && curhits[ii].e>0){
+            int dt = (seed_hit.t - (curhits[ii].t+4))*4;  //ns
+	    if( dt<=(hit_dt+1) && dt>=-(hit_dt+1)){
+	       total_e = total_e+curhits[ii].e;
+	       nhits++;
+	    }
+	}
+	
      }
 
-     if(found && nhits>1){
-       acluster.x=0;
-       acluster.y=0;
-       acluster.e=total_e;
-       acluster.t=seed_hit.t;
-       acluster.nhits=nhits;
+     cluster_t cc={0,0,0,0,0};
+     if(nhits>1){
+	cc.e=total_e;
+	cc.nhits=nhits;
      }
-     else{
-       acluster.x=0;
-       acluster.y=0;
-       acluster.e=0;
-       acluster.t=0;
-       acluster.nhits=0;
-     }
-     return;
+
+     return cc;
+
 }
-
-
 

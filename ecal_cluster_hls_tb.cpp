@@ -79,8 +79,7 @@ int main(int argc, char *argv[])
 	 int tmpy=cl.y.to_uint();
 	 int tmpe=cl.e.to_uint();
 	 int tmpt=0;
-         if(t32ns==0)tmpt=cl.t.to_uint()*4;
-         else tmpt=cl.t.to_uint()*4+32*t32ns-16;
+         tmpt=cl.t.to_uint()*4+32*t32ns-16;
 	 int tmpn=cl.nhits.to_uint();
          printf("cluster at block(%d,%d): e=%d, t=%d, nhits=%d\n",tmpx, tmpy, tmpe, tmpt, tmpn); 
       }
@@ -100,8 +99,7 @@ int main(int argc, char *argv[])
     for(int i=0;i<8;i++)
     {
       if(trigger.trig[i])
-        if(t32ns==0)printf("Trigger found at T=%dns\n", i*4);
-        else printf("Trigger found at T=%dns\n", t32ns*32+i*4-16);
+        printf("Trigger found at T=%dns\n", t32ns*32+i*4-16);
     }
 #endif
     t32ns++;

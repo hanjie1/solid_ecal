@@ -14,3 +14,5 @@ set_directive_array_partition -type complete -dim 1 "ecal_cluster_hls" fadc_hits
 set_directive_array_partition -type complete -dim 1 "ecal_cluster_hls" fadc_hits.fiber_ch_r
 set_directive_array_partition -type complete -dim 1 "ecal_cluster_hls" fadc_disc
 set_directive_array_partition -type complete -dim 1 "ecal_cluster_hls" fadc_hits_pre.vxs_ch
+set_directive_array_partition -type complete -dim 1 "ecal_cluster_hls" fadc_hits_pre.vxs_ch
+set_directive_data_pack "ecal_cluster_hls" s_cluster_all

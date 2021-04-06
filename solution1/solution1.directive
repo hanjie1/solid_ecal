@@ -70,6 +70,18 @@
                 <option name="dim" value="1"/>
             </pragma>
         </directive>
+        <directive functionName="ecal_cluster_hls" label="" functionLabel="">
+            <pragma name="ARRAY_PARTITION">
+                <option name="variable" value="fadc_hits_pre.vxs_ch" positionalBoolean="4"/>
+                <option name="complete" value="" positionalBoolean="type"/>
+                <option name="dim" value="1"/>
+            </pragma>
+        </directive>
+        <directive functionName="ecal_cluster_hls" label="" functionLabel="">
+            <pragma name="DATA_PACK">
+                <option name="variable" value="s_cluster_all" positionalBoolean="4"/>
+            </pragma>
+        </directive>
     </sourceFile>
 </AutoPilot:ProjectResources>
 

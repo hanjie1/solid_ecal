@@ -14,13 +14,6 @@ typedef struct
   ap_uint<3> t;
 } hit_t;
 
-typedef struct
-{
-  ap_uint<13> e;
-  ap_uint<3> t;
-  ap_uint<8> ch;  // channel number
-  ap_uint<1> ispre; // if it's from previous fadc_hits: 1: it's previous hit, 0: it's current hit
-} seed_hit_t;   // hit_t that passes the seed_threshold
 
 // fadc_hits_t:
 // - contains 256 VXS channels worth + 32 left fiber + 32 right fiber of hit_t reported each 32ns
@@ -36,7 +29,7 @@ typedef struct
 //
 //   fiber_ch_l[0] to fiber_ch_l[31]: these come from adjacent sectors of ecal and needed for current sector to build (6+1) clusters for trigger
 //   fiber_ch_r[0] to fiber_ch_r[31]  channel mapping is arbitrary and needs to be defined
-#define N_CHAN_SEC 60   // number of fadc channels per sector
+#define N_CHAN_SEC 10   // number of fadc channels per sector
 typedef struct
 {
   hit_t vxs_ch[N_CHAN_SEC];
@@ -82,11 +75,10 @@ void ecal_cluster_hls(
     hls::stream<cluster_all_t> &s_cluster_all
   );
 
-void Find_block(int ch, int& nx, int& ny); // return the nx and ny of the fadc channel
-int Find_channel(int nx, int ny);   // return the channel number of the block(nx, ny)
-void Find_cluster(seed_hit_t seed_hit, seed_hit_t prehits[6],seed_hit_t curhits[6],ap_uint<3> hit_dt,cluster_t& acluster);
-void Find_nearby(int ch, int (&ch_nearby)[6], int& nx, int& ny);
-
+ap_uint<5> Find_block(ap_uint<8> ch, ap_uint<1> dim);
+ap_uint<8> Find_channel(ap_uint<5> nx, ap_uint<5> ny);
+ap_uint<8> Find_nearby(ap_uint<8> ch, ap_uint<3> ii);
+cluster_t Find_cluster(hit_t seed_hit, hit_t prehits[6], hit_t curhits[6], ap_uint<3> hit_dt);
 
 
 #endif
