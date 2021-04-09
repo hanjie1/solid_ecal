@@ -4,7 +4,7 @@
 
 int main(int argc, char *argv[])
 {
-  ap_uint<3> hit_dt = 7;
+  ap_uint<3> hit_dt = 2;
   ap_uint<13> seed_threshold = 2000;
   ap_uint<16> cluster_threshold = 2000;
   hls::stream<fadc_hits_t> s_fadc_hits;
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 #ifndef __SYNTHESIS__
     for(int nc=0; nc<N_CHAN_SEC; nc++){
       cluster_t cl=C.c[nc];
-      if(cl.nhits!=0){
+      if(cl.nhits>1){
 	 int tmpx=cl.x.to_uint();
 	 int tmpy=cl.y.to_uint();
 	 int tmpe=cl.e.to_uint();

@@ -49,7 +49,7 @@ typedef struct
   ap_uint<4> y;
   ap_uint<16> e;
   ap_uint<3> t;
-  ap_uint<4>  nhits;
+  ap_uint<3>  nhits;
 } cluster_t;
 
 
@@ -76,9 +76,9 @@ void ecal_cluster_hls(
   );
 
 ap_uint<5> Find_block(ap_uint<8> ch, ap_uint<1> dim);
-ap_uint<8> Find_channel(ap_uint<5> nx, ap_uint<5> ny);
-ap_uint<8> Find_nearby(ap_uint<8> ch, ap_uint<3> ii);
-cluster_t Find_cluster(hit_t seed_hit, hit_t prehits[6], hit_t curhits[6], ap_uint<3> hit_dt);
+int Find_channel(ap_uint<5> nx, ap_uint<5> ny);
+int Find_nearby(ap_uint<8> ch, ap_uint<3> ii);
+cluster_t Find_cluster(hit_t prehits[7], hit_t curhits[7], ap_uint<3> hit_dt, ap_uint<13> seed_threshold, ap_uint<5> x, ap_uint<4> y);
 
 
 #endif

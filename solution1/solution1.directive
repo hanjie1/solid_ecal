@@ -82,6 +82,15 @@
                 <option name="variable" value="s_cluster_all" positionalBoolean="4"/>
             </pragma>
         </directive>
+        <directive functionName="hit_coin" label="" functionLabel="">
+            <pragma name="INLINE"/>
+        </directive>
+        <directive functionName="ecal_cluster_hls" label="" functionLabel="">
+            <pragma name="INTERFACE">
+                <option name="ap_ctrl_none" value="" positionalBoolean="mode"/>
+                <option name="port" value="return" positionalBoolean="4"/>
+            </pragma>
+        </directive>
     </sourceFile>
 </AutoPilot:ProjectResources>
 

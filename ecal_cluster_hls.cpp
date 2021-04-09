@@ -11,7 +11,6 @@ ap_uint<8> disc_cluster(cluster_t ac, ap_uint<16> cluster_threshold)
   return result;
 }
 
-
 // ecal_cluster_hls:
 // - hit_dt: maximum time difference (in +/-4ns ticks) from seed hit required to accept adjacent spacial hit into cluster
 // - seed_threshold: minimum hit energy required for central hit of cluster position to allow a cluster to be formed
@@ -29,89 +28,61 @@ void ecal_cluster_hls(
     hls::stream<cluster_all_t> &s_cluster_all
   )
 {
-  // example trigger (is any FADC hit over threshold): reading fadc hit steam, and writing trigger stream
   fadc_hits_t fadc_hits = s_fadc_hits.read();
+#ifndef __SYNTHESIS__
+  // Initialize for simulation only (creates a problem for synthesis scheduling)
+  static fadc_hits_t fadc_hits_pre = {{{0,0}},{{0,0}},{{0,0}}};
+#else
   static fadc_hits_t fadc_hits_pre;
+#endif
   ap_uint<8> ac_disc[N_CHAN_SEC];
   trigger_t trigger = {0};
   cluster_all_t allc;
-  cluster_t ac;
-  static bool isfirst=true;
-
-  int nclust=0;
-  hit_t seed_hit;
-  hit_t nearby_hit;
   
   for(int ch=0; ch<N_CHAN_SEC;ch++){
-      seed_hit.e=0;
-      seed_hit.t=0;
-      ap_uint<1> ispre=0;
-      if(fadc_hits_pre.vxs_ch[ch].e>seed_threshold && fadc_hits_pre.vxs_ch[ch].t>=4 && isfirst==false){
-	   seed_hit.e=fadc_hits_pre.vxs_ch[ch].e;
-	   seed_hit.t=fadc_hits_pre.vxs_ch[ch].t-4;
-	   ispre=1;
-      }
-
-      if(fadc_hits.vxs_ch[ch].e>seed_threshold && fadc_hits.vxs_ch[ch].t<4){
-	   seed_hit.e=fadc_hits.vxs_ch[ch].e;
-	   seed_hit.t=fadc_hits.vxs_ch[ch].t+4;
-	   ispre=0;
-      }
-
-      if(seed_hit.e>0){
-	   ap_uint<8> nearby_ch=255;
-	   hit_t nearby_hit_pre[6];
-	   hit_t nearby_hit[6];
-	   for(int in=0; in<6; in++){
-	      nearby_ch = Find_nearby(ch, in);
-	      if(nearby_ch<255){
+	   hit_t nearby_hit_pre[7];
+	   hit_t nearby_hit[7];
+	   for(int in=0; in<7; in++){
+	      int nearby_ch = Find_nearby(ch, in);
+        if(nearby_ch>=0){
 	       nearby_hit_pre[in].e=fadc_hits_pre.vxs_ch[nearby_ch].e;
 	       nearby_hit_pre[in].t=fadc_hits_pre.vxs_ch[nearby_ch].t;
-
-	       nearby_hit[in].e=fadc_hits.vxs_ch[nearby_ch].e;
-	       nearby_hit[in].t=fadc_hits.vxs_ch[nearby_ch].t;
 	      }
 	      else{
 	       nearby_hit_pre[in].e=0;
 	       nearby_hit_pre[in].t=0;
-
-	       nearby_hit[in].e=0;
-	       nearby_hit[in].t=0;
 	      }
+
+        if(nearby_ch>=0){
+         nearby_hit[in].e=fadc_hits.vxs_ch[nearby_ch].e;
+         nearby_hit[in].t=fadc_hits.vxs_ch[nearby_ch].t;
+        }
+        else{
+         nearby_hit[in].e=0;
+         nearby_hit[in].t=0;
+        }
 	   }
 
-	   ac=Find_cluster(seed_hit, nearby_hit_pre, nearby_hit,hit_dt);
-
-	   if(ac.nhits>1){
-	     ac.t=seed_hit.t;
-	     ac.x = Find_block(ch,0);	   	   
-	     ac.y = Find_block(ch,1);	   	   
-
-             nclust++;
-	   }
-	   else{ac.e=0; ac.t=0; ac.x=0; ac.y=0; ac.nhits=0;}
-      }
-      else{
-	  ac.e=0; ac.t=0; ac.x=0; ac.y=0; ac.nhits=0;
-      }
-      allc.c[ch] = ac;
-
+	   allc.c[ch] = Find_cluster(nearby_hit_pre, nearby_hit,hit_dt, seed_threshold, Find_block(ch,0), Find_block(ch,1));
   }
      
-  fadc_hits_pre = fadc_hits; 
-  if(isfirst==true) isfirst=false;
+  // save the previous fadc_hits
+  fadc_hits_pre = fadc_hits;
 
 #ifndef __SYNTHESIS__
+  int nclust = 0;
+  for(int ch=0; ch<N_CHAN_SEC;ch++){
+    if(allc.c[ch].nhits>1)
+      nclust++;
+  }
   printf("nclust: %d\n",nclust);
 #endif
-  if(nclust==0)return;
 
   s_cluster_all.write(allc);
 
   for(int ii=0; ii<N_CHAN_SEC;ii++){
      ac_disc[ii]=disc_cluster(allc.c[ii],cluster_threshold); 
   }
-
   
   // 'or' together result from all channels, for each possible 4ns time bin
   for(int ii=0;ii<N_CHAN_SEC;ii++)
@@ -120,7 +91,6 @@ void ecal_cluster_hls(
   // write trigger result
   s_trigger.write(trigger);
 
-  // save the previous fadc_hits
   return;
 }
 
@@ -161,9 +131,9 @@ ap_uint<5> Find_block(ap_uint<8> ch, ap_uint<1> dim){
 }
 
 // for a given (x,y), return the channel number
-ap_uint<8> Find_channel(ap_uint<5> nx, ap_uint<5> ny){
+int Find_channel(ap_uint<5> nx, ap_uint<5> ny){
   int slot=0, ich=0;
-  ap_uint<8> ch=255;
+  int ch = -1;
 
   int found=0;
   for(int ii=0;ii<10;ii++){
@@ -172,7 +142,6 @@ ap_uint<8> Find_channel(ap_uint<5> nx, ap_uint<5> ny){
 	   slot = ii;
 	   ich = jj;
 	   ch = 16*slot+ich;
-	   return ch; 
       }
    }
   }
@@ -180,7 +149,7 @@ ap_uint<8> Find_channel(ap_uint<5> nx, ap_uint<5> ny){
   return ch;
 }
  
-ap_uint<8> Find_nearby(ap_uint<8> ch, ap_uint<3> ii){
+int Find_nearby(ap_uint<8> ch, ap_uint<3> ii){
      ap_uint<5> nx=0, ny=0;
      nx = Find_block(ch,0);
      ny = Find_block(ch,1);
@@ -189,52 +158,81 @@ ap_uint<8> Find_nearby(ap_uint<8> ch, ap_uint<3> ii){
 #ifndef __SYNTHESIS__
         printf("couldn't find the block number for chan %d\n",ch.to_uint());
 #endif
-        return 255;
+        return -1;
      }
 
      switch(ii){
-       case 0: return Find_channel(nx-1, ny-1); // left up
-       case 1: return Find_channel(nx-1, ny);   // left down
-       case 2: return Find_channel(nx, ny-1);   // middle up
-       case 3: return Find_channel(nx, ny+1);   // middle down
-       case 4: return Find_channel(nx+1, ny);   // right up
-       case 5: return Find_channel(nx+1, ny+1); // right down
+       case 0: return Find_channel(nx, ny);     // center
+       case 1: return Find_channel(nx-1, ny-1); // left up
+       case 2: return Find_channel(nx-1, ny);   // left down
+       case 3: return Find_channel(nx, ny-1);   // middle up
+       case 4: return Find_channel(nx, ny+1);   // middle down
+       case 5: return Find_channel(nx+1, ny);   // right up
+       case 6: return Find_channel(nx+1, ny+1); // right down
      }
 
-     return 255;
+     return -1;
 }
 
-cluster_t Find_cluster(hit_t seed_hit, hit_t prehits[6], hit_t curhits[6], ap_uint<3> hit_dt){
+ap_uint<1> hit_coin(ap_uint<4> t1, ap_uint<4> t2, ap_uint<4> dt) {
+  ap_uint<4> diff = (t1<t2) ? (t2-t1) : (t1-t2);
+  return (diff<=dt) ? 1 : 0;
+}
 
-     ap_uint<16> total_e=seed_hit.e;
-     ap_uint<4>  nhits=1;
+cluster_t Find_cluster(
+    hit_t prehits[7], hit_t curhits[7],
+    ap_uint<3> hit_dt, ap_uint<13> seed_threshold,
+    ap_uint<5> x, ap_uint<4> y
+  ){
+     ap_uint<4> t = 0;
+     ap_uint<13> e_array[7];
+     ap_uint<7> hits = 0;
 
-     bool found=true;
-     for(int ii=0; ii<6; ii++){
-	if(prehits[ii].e<=seed_hit.e && prehits[ii].e>0){
-            int dt = (seed_hit.t - (prehits[ii].t-4))*4;  //ns
-	    if( dt<=(hit_dt+1) && dt>=-(hit_dt+1)){
-	       total_e = total_e+prehits[ii].e;
-	       nhits++;
-	    }
-	}
+     if(prehits[0].e>=seed_threshold && prehits[0].t>=4){
+       t = prehits[0].t;    // map pre time 4 to 7 -> 4 to 7 (unchanged)
+       e_array[0] = prehits[0].e;
+       hits[0] = 1;
+     }
+     else if(curhits[0].e>=seed_threshold && curhits[0].t<4){
+       t = curhits[0].t+8;  // map cur time 0 to 3 -> 8 to 11 (move to time after pre hit window)
+       e_array[0] = curhits[0].e;
+       hits[0] = 1;
+     }
+     
 
-	if(curhits[ii].e<=seed_hit.e && curhits[ii].e>0){
-            int dt = (seed_hit.t - (curhits[ii].t+4))*4;  //ns
-	    if( dt<=(hit_dt+1) && dt>=-(hit_dt+1)){
-	       total_e = total_e+curhits[ii].e;
-	       nhits++;
-	    }
-	}
-	
+     for(int ii=1; ii<7; ii++){
+       e_array[ii] = 0;
+
+       if(curhits[ii].e && hit_coin(t, 8+curhits[ii].t, hit_dt))
+       {
+         e_array[ii] = curhits[ii].e;
+         hits[ii] = 1;
+       }
+
+       if(prehits[ii].e && hit_coin(t, prehits[ii].t, hit_dt))
+       {
+         e_array[ii] = prehits[ii].e;
+         hits[ii] = 1;
+       }
+
+       if(e_array[ii] >= e_array[0])
+         hits[0] = 0;
      }
 
-     cluster_t cc={0,0,0,0,0};
-     if(nhits>1){
-	cc.e=total_e;
-	cc.nhits=nhits;
+     cluster_t cc;
+     cc.e = 0;
+     cc.nhits = 0;
+     cc.t = t-4;  // map time 4 to 11 -> 0 to 7
+     cc.x = x;
+     cc.y = y;
+     if(hits[0])
+     {
+       for(int ii=0; ii<7; ii++)
+       {
+         cc.e += e_array[ii];
+         cc.nhits += hits[ii];
+       }
      }
-
      return cc;
 
 }
