@@ -28,6 +28,20 @@ int main(int argc, char *argv[])
         fadc_hits.fiber_ch_l[ch].t = 0;
         fadc_hits.fiber_ch_r[ch].e = 0;
         fadc_hits.fiber_ch_r[ch].t = 0;
+
+        if((rand() % 100)<10 && ch<15)  // 1% hit chance
+         {
+           fadc_hits.fiber_ch_l[ch].e = rand() % 8192; // random hit energy
+           fadc_hits.fiber_ch_l[ch].t = rand() % 8;    // random hit time (4ns)
+
+#ifndef __SYNTHESIS__
+        printf("fadc hit: fiber_l ch=%d, e=%d, t=%d\n",
+            ch,
+            fadc_hits.fiber_ch_l[ch].e.to_uint(),
+            fadc_hits.fiber_ch_l[ch].t.to_uint()*4+frame*32
+          );
+#endif
+	 }
       }
       if((rand() % 100)<10)  // 1% hit chance
       {
@@ -74,7 +88,7 @@ int main(int argc, char *argv[])
 #ifndef __SYNTHESIS__
     for(int nc=0; nc<N_CHAN_SEC; nc++){
       cluster_t cl=C.c[nc];
-      if(cl.nhits>1){
+      if(cl.nhits>0){
 	 int tmpx=cl.x.to_uint();
 	 int tmpy=cl.y.to_uint();
 	 int tmpe=cl.e.to_uint();
