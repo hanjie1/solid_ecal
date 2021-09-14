@@ -40,30 +40,58 @@ void ecal_cluster_hls(
   cluster_all_t allc;
   
   for(int ch=0; ch<N_CHAN_SEC;ch++){
-	   hit_t nearby_hit_pre[7];
-	   hit_t nearby_hit[7];
-	   for(int in=0; in<7; in++){
-	      int nearby_ch = Find_nearby(ch, in);
-        if(nearby_ch>=0){
-	       nearby_hit_pre[in].e=fadc_hits_pre.vxs_ch[nearby_ch].e;
-	       nearby_hit_pre[in].t=fadc_hits_pre.vxs_ch[nearby_ch].t;
-	      }
-	      else{
-	       nearby_hit_pre[in].e=0;
-	       nearby_hit_pre[in].t=0;
-	      }
+      hit_t nearby_hit_pre[7];
+      hit_t nearby_hit[7];
 
-        if(nearby_ch>=0){
-         nearby_hit[in].e=fadc_hits.vxs_ch[nearby_ch].e;
-         nearby_hit[in].t=fadc_hits.vxs_ch[nearby_ch].t;
-        }
-        else{
-         nearby_hit[in].e=0;
-         nearby_hit[in].t=0;
-        }
+      ap_uint<3> edge=Find_block(ch,2);
+   
+      if(edge==0){
+        for(int in=0; in<7; in++){
+ 	   int nearby_ch = Find_nearby(ch, in);
+
+           nearby_hit_pre[in].e=0;
+           nearby_hit_pre[in].t=0;
+           nearby_hit[in].e=0;
+           nearby_hit[in].t=0;
+
+           if(nearby_ch>=0){
+	      nearby_hit_pre[in].e=fadc_hits_pre.vxs_ch[nearby_ch].e;
+	      nearby_hit_pre[in].t=fadc_hits_pre.vxs_ch[nearby_ch].t;
+              nearby_hit[in].e=fadc_hits.vxs_ch[nearby_ch].e;
+              nearby_hit[in].t=fadc_hits.vxs_ch[nearby_ch].t;
+	   }
+         }
+       }
+
+      if(edge==1){
+        for(int in=0; in<7; in++){
+ 	   int nearby_ch = Find_nearby(ch, in);
+
+           nearby_hit_pre[in].e=0;
+           nearby_hit_pre[in].t=0;
+           nearby_hit[in].e=0;
+           nearby_hit[in].t=0;
+
+           if(nearby_ch>=0){
+	     if(in==1 || in==3){
+	      nearby_hit_pre[in].e=fadc_hits_pre.fiber_ch_l[nearby_ch].e;
+	      nearby_hit_pre[in].t=fadc_hits_pre.fiber_ch_l[nearby_ch].t;
+              nearby_hit[in].e=fadc_hits.fiber_ch_l[nearby_ch].e;
+              nearby_hit[in].t=fadc_hits.fiber_ch_l[nearby_ch].t;
+	     }
+	     else{
+	      nearby_hit_pre[in].e=fadc_hits_pre.vxs_ch[nearby_ch].e;
+	      nearby_hit_pre[in].t=fadc_hits_pre.vxs_ch[nearby_ch].t;
+              nearby_hit[in].e=fadc_hits.vxs_ch[nearby_ch].e;
+              nearby_hit[in].t=fadc_hits.vxs_ch[nearby_ch].t;
+	     }
 	   }
 
-	   allc.c[ch] = Find_cluster(nearby_hit_pre, nearby_hit,hit_dt, seed_threshold, Find_block(ch,0), Find_block(ch,1));
+         }
+       }
+      
+
+      allc.c[ch] = Find_cluster(nearby_hit_pre, nearby_hit,hit_dt, seed_threshold, Find_block(ch,0), Find_block(ch,1));
   }
      
   // save the previous fadc_hits
@@ -94,48 +122,34 @@ void ecal_cluster_hls(
   return;
 }
 
-// build fadc map
-
-typedef struct{
-   ap_uint<5> nx;
-   ap_uint<5> ny;
-}block_coords;
-
-block_coords block_map[10][16]={
-       { {1,1},{1,2},{1,3},{1,4},{1,5},{2,1},{2,2},{2,3},{2,4},{2,5},{3,1},{3,2},{3,3},{3,4},{3,5},{3,6} },
-       { {4,1},{4,2},{4,3},{4,4},{4,5},{4,6},{5,1},{5,2},{5,3},{5,4},{5,5},{5,6},{5,7},{6,1},{6,2},{6,3} },
-       { {6,4},{6,5},{6,6},{6,7},{7,1},{7,2},{7,3},{7,4},{7,5},{7,6},{7,7},{7,8},{8,1},{8,2},{8,3},{8,4} },
-       { {8,5},{8,6},{8,7},{8,8},{9,1},{9,2},{9,3},{9,4},{9,5},{9,6},{9,7},{9,8},{9,9},{10,1},{10,2},{10,3} },
-       { {10,4},{10,5},{10,6},{10,7},{10,8},{10,9},{11,1},{11,2},{11,3},{11,4},{11,5},{11,6},{11,7},{11,8},{11,9},{11,10} },
-       { {12,1},{12,2},{12,3},{12,4},{12,5},{12,6},{12,7},{12,8},{12,9},{12,10},{13,1},{13,2},{13,3},{13,4},{13,5},{13,6} },
-       { {13,7},{13,8},{13,9},{13,10},{13,11},{14,1},{14,2},{14,3},{14,4},{14,5},{14,6},{14,7},{14,8},{14,9},{14,10},{14,11} },
-       { {15,2},{15,3},{15,4},{15,5},{15,6},{15,7},{15,8},{15,9},{15,10},{15,11},{15,12},{16,3},{16,4},{16,5},{16,6},{16,7} },
-       { {16,8},{16,9},{16,10},{16,11},{16,12},{17,5},{17,6},{17,7},{17,8},{17,9},{17,10},{17,11},{17,12},{17,13},{18,9},{18,10} },
-       { {18,11},{18,12},{18,13},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0} }
-}; 
-
 // for a given channel number, return the nx and ny of the channel map 
 ap_uint<5> Find_block(ap_uint<8> ch, ap_uint<1> dim){    
   ap_uint<5> nx=0; 
   ap_uint<5> ny=0;
+  ap_uint<3> edge=0;
 
   int slot = ch%16;  // slot number, start from 0
   int ich = ch-slot*16; // channel number inside a fadc, start from 0
 
   nx=block_map[slot][ich].nx;
   ny=block_map[slot][ich].ny;
+  edge=block_map[slot][ich].edge;
 
-  if( dim==0 ) return nx;
-  else return ny;
+  switch(dim){
+    case 0: return nx;
+    case 1: return ny;
+    case 2: return edge;
+  }
 
 }
 
 // for a given (x,y), return the channel number
-int Find_channel(ap_uint<5> nx, ap_uint<5> ny){
+int Find_channel(ap_uint<5> nx, ap_uint<5> ny, ap_uint<3> edge){
   int slot=0, ich=0;
   int ch = -1;
 
-  int found=0;
+  if(edge==1) return (nx-1);
+
   for(int ii=0;ii<10;ii++){
    for(int jj=0;jj<16;jj++){
       if( (block_map[ii][jj].nx==nx) && (block_map[ii][jj].ny==ny) ){
@@ -148,11 +162,13 @@ int Find_channel(ap_uint<5> nx, ap_uint<5> ny){
 
   return ch;
 }
- 
+   
 int Find_nearby(ap_uint<8> ch, ap_uint<3> ii){
      ap_uint<5> nx=0, ny=0;
+     ap_uint<2> edge=0;
      nx = Find_block(ch,0);
      ny = Find_block(ch,1);
+     edge = Find_block(ch,2);
 
      if(nx<1 || ny<1){
 #ifndef __SYNTHESIS__
@@ -162,20 +178,21 @@ int Find_nearby(ap_uint<8> ch, ap_uint<3> ii){
      }
 
      switch(ii){
-       case 0: return Find_channel(nx, ny);     // center
-       case 1: return Find_channel(nx-1, ny-1); // left up
-       case 2: return Find_channel(nx-1, ny);   // left down
-       case 3: return Find_channel(nx, ny-1);   // middle up
-       case 4: return Find_channel(nx, ny+1);   // middle down
-       case 5: return Find_channel(nx+1, ny);   // right up
-       case 6: return Find_channel(nx+1, ny+1); // right down
+       case 0: return ch; // middle
+       case 1: return Find_channel(nx-1, ny-1, edge); // left up
+       case 2: return Find_channel(nx-1, ny, edge);   // left down
+       case 3: return Find_channel(nx, ny-1, edge);   // middle up
+       case 4: return Find_channel(nx, ny+1, edge);   // middle down
+       case 5: return Find_channel(nx+1, ny, edge);   // right up
+       case 6: return Find_channel(nx+1, ny+1, edge); // right down
      }
+
 
      return -1;
 }
 
-ap_uint<1> hit_coin(ap_uint<4> t1, ap_uint<4> t2, ap_uint<4> dt) {
-  ap_uint<4> diff = (t1<t2) ? (t2-t1) : (t1-t2);
+ap_uint<1> hit_coin(ap_uint<3> t1, ap_uint<3> t2, ap_uint<3> dt) {
+  ap_uint<3> diff = (t1<t2) ? (t2-t1) : (t1-t2);
   return (diff<=dt) ? 1 : 0;
 }
 
