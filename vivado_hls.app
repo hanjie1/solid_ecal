@@ -6,8 +6,8 @@
     </Simulation>
     <files xmlns="">
         <file name="../ecal_cluster_hls_tb.cpp" sc="0" tb="1" cflags=" -Wno-unknown-pragmas" blackbox="false"/>
-        <file name="ecal_cluster_hls/ecal_cluster_hls.cpp" sc="0" tb="false" cflags="" blackbox="false"/>
         <file name="ecal_cluster_hls/ecal_cluster_hls.h" sc="0" tb="false" cflags="" blackbox="false"/>
+        <file name="ecal_cluster_hls/ecal_cluster_hls.cpp" sc="0" tb="false" cflags="" blackbox="false"/>
     </files>
     <solutions xmlns="">
         <solution name="solution1" status="active"/>

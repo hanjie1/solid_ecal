@@ -18,3 +18,5 @@ set_directive_array_partition -type complete -dim 1 "ecal_cluster_hls" fadc_hits
 set_directive_data_pack "ecal_cluster_hls" s_cluster_all
 set_directive_inline "hit_coin"
 set_directive_interface -mode ap_ctrl_none "ecal_cluster_hls"
+set_directive_array_partition -type complete -dim 1 "ecal_cluster_hls" fadc_hits_pre.fiber_ch_l
+set_directive_array_partition -type complete -dim 1 "ecal_cluster_hls" fadc_hits_pre.fiber_ch_r
