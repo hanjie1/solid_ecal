@@ -76,7 +76,7 @@ void ecal_cluster_hls(
     hls::stream<cluster_all_t> &s_cluster_all
   );
 
-ap_uint<5> Find_block(ap_uint<8> ch, ap_uint<1> dim);
+ap_uint<5> Find_block(ap_uint<8> ch, ap_uint<2> dim);
 int Find_channel(ap_uint<5> nx, ap_uint<5> ny);
 int Find_nearby(ap_uint<8> ch, ap_uint<3> ii);
 cluster_t Find_cluster(hit_t prehits[7], hit_t curhits[7], ap_uint<3> hit_dt, ap_uint<13> seed_threshold, ap_uint<5> x, ap_uint<4> y);

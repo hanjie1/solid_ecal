@@ -83,7 +83,7 @@ void ecal_cluster_hls(
   for(int ch=0; ch<N_CHAN_SEC;ch++){
     if(allc.c[ch].nhits>1)
       nclust++;
-//      printf("nclust %d at (%d, %d), e=%d, t=%d\n",nclust,allc.c[ch].x.to_uint(),allc.c[ch].y.to_uint(),allc.c[ch].e.to_uint(),allc.c[ch].t.to_uint());
+      //printf("nclust %d at (%d, %d), e=%d, t=%d\n",nclust,allc.c[ch].x.to_uint(),allc.c[ch].y.to_uint(),allc.c[ch].e.to_uint(),allc.c[ch].t.to_uint());
   }
   printf("nclust: %d\n",nclust);
 #endif
@@ -128,7 +128,7 @@ block_coords block_map[10][16]={
 };
 
 // for a given channel number, return the nx and ny of the channel map 
-ap_uint<5> Find_block(ap_uint<8> ch, ap_uint<1> dim){    
+ap_uint<5> Find_block(ap_uint<8> ch, ap_uint<2> dim){    
   ap_uint<5> nx=0; 
   ap_uint<5> ny=0;
   ap_uint<3> edge=0;

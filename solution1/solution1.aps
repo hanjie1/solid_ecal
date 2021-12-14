@@ -7,7 +7,7 @@
         <config_compile blackbox=""/>
     </config>
     <UIConfigurations>
-        <UIAutosynConf hideTrivialOp="true" isBasedOnBoard="false" isSolutionDirty="false" isStopAskAgain="true" showDetailDesignViewer="false">
+        <UIAutosynConf hideTrivialOp="true" isBasedOnBoard="false" isSolutionDirty="true" isStopAskAgain="true" showDetailDesignViewer="false">
             <Platform>xilinx/virtex7/virtex7</Platform>
             <Platform>xilinx/virtex7/virtex7_fpv6</Platform>
             <customLibs/>
